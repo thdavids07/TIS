@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Title of the document</title>
+	<style>
+		#camaraDiv {
+			visibility: visible;
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-color: black;
+		}
+		
+		#video {
+			position: relative;
+		}
+		
+		#tomar {
+			position: absolute;
+			background-image : url("tomar.png");
+			width : 50px;
+			height : 50px;
+			background-size: contain;
+			cursor : pointer;
+		}
+		
+	</style>
+</head>
+<body>
+<button id="abrirBtn">Abrir Cámara</button>
+<div id="camaraDiv">
+	<video id="video" autoplay></video>
+	<div id="tomar"></div>
+</div>
+<br>
+<canvas id="canvas" width="320px" height="240px"></canvas>
+<br>
+<button id="descargar">Descargar JPG</button>
+<div id="imagenJPG"></div>
+<hr>
+<form method="post" action="upload.do" id="form-id">
+  <input type="hidden" name="base64" id="input-id"/>
+  <input type="submit" value="Enviar"/>
+</form>
+<script>
+		window.addEventListener("DOMContentLoaded", function() {
+		
+			var canvas = document.getElementById('canvas');
+			var context = canvas.getContext('2d');
+		
+			var videoDat = {};
+		
+				document.getElementById('camaraDiv').style.visibility = "hidden";
+				document.getElementById('abrirBtn').addEventListener('click', function() {
+					document.getElementById('camaraDiv').style.visibility = "visible";
+					
+					// Grab elements, create settings, etc.
+
+					var video = document.getElementById('video');
+					var mediaConfig =  {
+						video: true
+					};
+					var errBack = function(e) {
+						console.log('An error has occurred!', e)
+					};
+
+					// Put video listeners into place
+					if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+						navigator.mediaDevices.getUserMedia(mediaConfig).then(function(stream) {
+							video.src = window.URL.createObjectURL(stream);
+							video.play();
+
+						});
+					}
+
+					/* Legacy code below! */
+					else if(navigator.getUserMedia) { // Standard
+						navigator.getUserMedia(mediaConfig, function(stream) {
+							video.src = stream;
+							video.play();
+						}, errBack);
+					} else if(navigator.webkitGetUserMedia) { // WebKit-prefixed
+						navigator.webkitGetUserMedia(mediaConfig, function(stream){
+							video.src = window.webkitURL.createObjectURL(stream);
+							video.play();
+						}, errBack);
+					} else if(navigator.mozGetUserMedia) { // Mozilla-prefixed
+						navigator.mozGetUserMedia(mediaConfig, function(stream){
+							video.src = window.URL.createObjectURL(stream);
+							video.play();
+						}, errBack);
+					}
+					
+					video.addEventListener('loadeddata', function() {
+						videoDat = {
+							vw : video.videoWidth,
+							vh : video.videoHeight
+						};
+						posicionar();
+					});
+					
+				});
+				
+				document.getElementById('descargar').addEventListener('click', function() {
+					//var canvas = document.getElementById("mycanvas");
+					var img    = canvas.toDataURL("image/jpeg");
+					document.getElementById('imagenJPG').innerHTML = '<img src="'+img+'"/>';
+					
+					//window.open("data:application/octet-stream;base64," + img);
+				});
+				
+				var posicionar = function(){
+				
+					var video = document.getElementById('video');
+					
+					if(video && videoDat.vw && videoDat.vh){
+					
+						var w = window.innerWidth;	
+						var h = window.innerHeight;	
+						console.log(w);
+						console.log(h);
+						
+						var vw = videoDat.vw;
+						var vh = videoDat.vh;
+						
+						if(w<h){
+							video.width = w;
+							video.height = (w*vh)/vw;
+							
+							var top = Math.floor((h - video.height) / 2);
+							document.getElementById('video').style.top = top+"px";
+							document.getElementById('video').style.left = "0px";
+							
+						} else {
+							video.width = (h*vw)/vh;
+							video.height = h;
+							
+							var left = Math.floor((w - video.width) / 2);
+							document.getElementById('video').style.top = "0px";
+							document.getElementById('video').style.left = left+"px";
+							
+						}
+						
+						document.getElementById('tomar').style.bottom = "10px";
+						document.getElementById('tomar').style.left = Math.floor((w - 50)/2)+"px";
+						
+					}
+				};
+				
+				document.getElementById('tomar').addEventListener('click', function() {
+					var video = document.getElementById('video');
+					var minimo_ancho = 320;
+					var minimo_largo = Math.floor((minimo_ancho*video.videoHeight)/video.videoWidth);
+					context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight,0 , 0, minimo_ancho, minimo_largo);	
+					document.getElementById('camaraDiv').style.visibility = "hidden";
+					
+					console.log(canvas.toDataURL());
+					
+					document.getElementById('input-id').value = canvas.toDataURL();
+					
+					
+				});
+				
+				
+				window.addEventListener('resize', function(){
+					console.log("resize");
+					posicionar();
+				});
+				
+				document.addEventListener('backbutton', function(){
+				  video.pause();
+				  video.currentTime = 0;
+				});
+				
+				document.getElementById('abrirBtn').click();
+			
+		}, false);
+
+	</script>
+</body>
+
+</html>
